@@ -11,15 +11,15 @@
 #define GLFW_INCLUDE_GLEXT
 #include "GLFW/glfw3.h"
 
-//teddy
-#include "teddy.h"
+//t20
+#include "T20.h"
 
 /***********/
 /* DEFINES */
 /***********/
 #define UNUSED(x) (void)(x)
 
-#define TEDDY_VERSION           "TEDDY 1.0"//LOL
+#define t20_VERSION           "t20 1.0"//LOL
 
 //opengl
 #define T_OPENGL_MAJOR          4
@@ -34,15 +34,14 @@
 /************/
 /* TYPEDEFS */
 /************/
-typedef struct Teddy
+typedef struct T20
 {
     int rows;
     int cols;
 
-    int cursor;
+    int cursor;//extra
 
     char *prompt;
-    char *prompt_header;
     int prompt_pos;
     int prompt_typing;
     int prompt_ready;
@@ -66,12 +65,12 @@ typedef struct Teddy
     GLuint prog_shader;
     GLuint texture;
 
-} Teddy;
+} T20;
 
 /**********/
 /* STATIC */
 /**********/
-static Teddy *teddy = NULL;
+static T20 *t20 = NULL;
 
 static const unsigned char T_DEFAULT_FONT[2048] = 
 {
@@ -280,32 +279,32 @@ static PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = NULL;
 /* STATIC PROTOTYPES */
 /*********************/
 //glfw
-static void TeddyGlfwResizeCallback(GLFWwindow *window, int width, int height);
-static void TeddyGlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int action, int mods);
-static void TeddyGlfwCharCallback(GLFWwindow *window, unsigned int codepoint);
-static void TeddyGlfwInit();
-static void TeddyGlfwClose();
+static void T20GlfwResizeCallback(GLFWwindow *window, int width, int height);
+static void T20GlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int action, int mods);
+static void T20GlfwCharCallback(GLFWwindow *window, unsigned int codepoint);
+static void T20GlfwInit();
+static void T20GlfwClose();
 
 //opengl
-static void TeddyOpenglLoadExtensions();
-static GLuint TeddyOpenglShader(GLenum type, const char *src);
-static GLuint TeddyOpenglProgramShader(GLuint vert_shader, GLuint frag_shader);
-static void TeddyOpenglInit();
-static void TeddyOpenglClose();
+static void T20OpenglLoadExtensions();
+static GLuint T20OpenglShader(GLenum type, const char *src);
+static GLuint T20OpenglProgramShader(GLuint vert_shader, GLuint frag_shader);
+static void T20OpenglInit();
+static void T20OpenglClose();
 
-//teddy internal
-static void TeddyError(char *str, ...);
-static void TeddyLoadBuffer(char *file, unsigned char **buffer, int *size);
-static void TeddyInitGlyphs(const unsigned char *font);
-static void TeddyDrawChar(char c, int row, int col);
-static void TeddyAddSubLine(char *str);
-static void TeddyUpdatePrompt();
-static void TeddyRender();
+//t20 internal
+static void T20Error(char *str, ...);
+static void T20LoadBuffer(char *file, unsigned char **buffer, int *size);
+static void T20InitGlyphs(const unsigned char *font);
+static void T20DrawChar(char c, int row, int col);
+static void T20AddSubLine(char *str);
+static void T20UpdatePrompt();
+static void T20Render();
 
 /********/
 /* GLFW */
 /********/
-static void TeddyGlfwResizeCallback(GLFWwindow *window, int width, int height)
+static void T20GlfwResizeCallback(GLFWwindow *window, int width, int height)
 {
     UNUSED(window);
 
@@ -314,7 +313,7 @@ static void TeddyGlfwResizeCallback(GLFWwindow *window, int width, int height)
     float view_w = 0;
     float view_h = 0;
 
-	float ratio = (float)teddy->texture_w/(float)teddy->texture_h;
+	float ratio = (float)t20->texture_w/(float)t20->texture_h;
 
 	if( width/ratio < height)
 	{
@@ -332,12 +331,12 @@ static void TeddyGlfwResizeCallback(GLFWwindow *window, int width, int height)
 		
     glViewport(x, y, view_w, view_h);	
 
-    TeddyRender();
+    T20Render();
 
 }
 
 /**********/
-static void TeddyGlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int action, int mods)
+static void T20GlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int action, int mods)
 {
     UNUSED(window);
     UNUSED(scancode);
@@ -348,21 +347,21 @@ static void TeddyGlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int
     switch (key)
     {
         case GLFW_KEY_BACKSPACE:
-            if(teddy->prompt_pos>0) 
+            if(t20->prompt_pos>0) 
             { 
-                teddy->prompt_pos--;
-                teddy->prompt[teddy->prompt_pos] = 0;
-                TeddyUpdatePrompt();
-                TeddyRender();
+                t20->prompt_pos--;
+                t20->prompt[t20->prompt_pos] = 0;
+                T20UpdatePrompt();
+                T20Render();
             }      
             break;
         
         case GLFW_KEY_ENTER:
-            if(teddy->prompt_typing) { teddy->prompt_ready = 1; }
+            if(t20->prompt_typing) { t20->prompt_ready = 1; }
             break;
 
         case GLFW_KEY_ESCAPE:
-            glfwSetWindowShouldClose(teddy->window,1);
+            glfwSetWindowShouldClose(t20->window,1);
             break;
 
         default:
@@ -372,45 +371,42 @@ static void TeddyGlfwKeyCallback(GLFWwindow *window,  int key, int scancode, int
 }
 
 /**********/
-static void TeddyGlfwCharCallback(GLFWwindow *window, unsigned int codepoint)
+static void T20GlfwCharCallback(GLFWwindow *window, unsigned int codepoint)
 {
     UNUSED(window);
 
-    if(codepoint < 0xFF && teddy->prompt_pos<teddy->cols-1)
+    if(codepoint < 0xFF && t20->prompt_pos<t20->cols-1)
     {
-        teddy->prompt[teddy->prompt_pos] = (char)codepoint;
-        teddy->prompt_pos++;
-        TeddyUpdatePrompt();
-        TeddyRender();
+        t20->prompt[t20->prompt_pos] = (char)codepoint;
+        t20->prompt_pos++;
+        T20UpdatePrompt();
+        T20Render();
     }
 }
 
 /**********/
-static void TeddyGlfwInit()
+static void T20GlfwInit()
 {
     glfwInit();
 
+    glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, T_OPENGL_MAJOR);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, T_OPENGL_MINOR);
     
-    glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
-    
-    teddy->window = glfwCreateWindow(teddy->texture_w, teddy->texture_h, "", NULL, NULL);
+    t20->window = glfwCreateWindow(t20->texture_w, t20->texture_h, "", NULL, NULL);
 
-    glfwSetWindowSizeCallback(teddy->window, TeddyGlfwResizeCallback);
-
-    glfwMakeContextCurrent(teddy->window);
+    glfwMakeContextCurrent(t20->window);
 
     glfwSwapInterval(0);
-
-    glfwSetKeyCallback(teddy->window, TeddyGlfwKeyCallback);
-    glfwSetCharCallback(teddy->window,TeddyGlfwCharCallback);
+    glfwSetKeyCallback(t20->window, T20GlfwKeyCallback);
+    glfwSetCharCallback(t20->window,T20GlfwCharCallback);
+    glfwSetWindowSizeCallback(t20->window, T20GlfwResizeCallback);
 }
 
 /**********/
-static void TeddyGlfwClose()
+static void T20GlfwClose()
 {
-    glfwDestroyWindow(teddy->window);
+    glfwDestroyWindow(t20->window);
  
     glfwTerminate();
 }
@@ -418,7 +414,7 @@ static void TeddyGlfwClose()
 /**********/
 /* OPENGL */
 /**********/
-static void TeddyOpenglLoadExtensions()
+static void T20OpenglLoadExtensions()
 {
     //log
     glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)glfwGetProcAddress("glGetProgramInfoLog");
@@ -460,7 +456,7 @@ static void TeddyOpenglLoadExtensions()
 }
 
 /**********/
-static GLuint TeddyOpenglShader(GLenum type, const char *src)
+static GLuint T20OpenglShader(GLenum type, const char *src)
 {
 	GLuint shader = glCreateShader(type);
 
@@ -472,7 +468,7 @@ static GLuint TeddyOpenglShader(GLenum type, const char *src)
 }
 
 /**********/
-static GLuint TeddyOpenglProgramShader(GLuint vert_shader, GLuint frag_shader)
+static GLuint T20OpenglProgramShader(GLuint vert_shader, GLuint frag_shader)
 {
 	GLuint prog_shader = glCreateProgram();
 
@@ -486,15 +482,15 @@ static GLuint TeddyOpenglProgramShader(GLuint vert_shader, GLuint frag_shader)
 }
 
 /**********/
-static void TeddyOpenglInit()
+static void T20OpenglInit()
 {
-    TeddyOpenglLoadExtensions();
+    T20OpenglLoadExtensions();
 
-    glGenVertexArrays(1, &teddy->vao);
-    glBindVertexArray(teddy->vao); 
+    glGenVertexArrays(1, &t20->vao);
+    glBindVertexArray(t20->vao); 
 
-	glGenBuffers(1, &teddy->vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, teddy->vbo);
+	glGenBuffers(1, &t20->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, t20->vbo);
 
 	glEnableVertexAttribArray(0);//vertex 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
@@ -506,9 +502,9 @@ static void TeddyOpenglInit()
 	
 	glPixelStorei(GL_UNPACK_ALIGNMENT,1);//fix for w not multiple of 4
 
-	glGenTextures(1, &teddy->texture);
+	glGenTextures(1, &t20->texture);
 
-	glBindTexture(GL_TEXTURE_2D, teddy->texture);
+	glBindTexture(GL_TEXTURE_2D, t20->texture);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -516,45 +512,45 @@ static void TeddyOpenglInit()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, teddy->texture_w, teddy->texture_h, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, t20->texture_w, t20->texture_h, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
 
-	teddy->vert_shader = TeddyOpenglShader(GL_VERTEX_SHADER, T_VERT_SRC);
+	t20->vert_shader = T20OpenglShader(GL_VERTEX_SHADER, T_VERT_SRC);
 
-    teddy->frag_shader = TeddyOpenglShader(GL_FRAGMENT_SHADER, T_FRAG_SRC);
+    t20->frag_shader = T20OpenglShader(GL_FRAGMENT_SHADER, T_FRAG_SRC);
 
-    teddy->prog_shader = TeddyOpenglProgramShader(teddy->vert_shader, teddy->frag_shader);
+    t20->prog_shader = T20OpenglProgramShader(t20->vert_shader, t20->frag_shader);
 
-	glUseProgram(teddy->prog_shader);
+	glUseProgram(t20->prog_shader);
 
 }
 
 /**********/
-static void TeddyOpenglClose()
+static void T20OpenglClose()
 {
-    glDeleteTextures(1, &teddy->texture);
+    glDeleteTextures(1, &t20->texture);
 
     glDisableVertexAttribArray(0);
 
     glDisableVertexAttribArray(1);
 
-    glDeleteVertexArrays(1, &teddy->vao);
+    glDeleteVertexArrays(1, &t20->vao);
 
-    glDeleteBuffers(1, &teddy->vbo);
+    glDeleteBuffers(1, &t20->vbo);
 
-	glDetachShader(teddy->prog_shader, teddy->vert_shader);
-	glDeleteShader(teddy->vert_shader);
+	glDetachShader(t20->prog_shader, t20->vert_shader);
+	glDeleteShader(t20->vert_shader);
 
-	glDetachShader(teddy->prog_shader, teddy->frag_shader);
-	glDeleteShader(teddy->frag_shader);
+	glDetachShader(t20->prog_shader, t20->frag_shader);
+	glDeleteShader(t20->frag_shader);
 
-	glDeleteProgram(teddy->prog_shader);
+	glDeleteProgram(t20->prog_shader);
 }
 
 
 /****************/
-/* TEDDY STATIC */
+/* t20 STATIC */
 /****************/
-static void TeddyError(char *str, ...)
+static void T20Error(char *str, ...)
 {
 	fprintf(stdout,"(*ERROR*)");
 
@@ -572,11 +568,11 @@ static void TeddyError(char *str, ...)
 }
 
 /**********/
-static void TeddyLoadBuffer(char *file, unsigned char **buffer, int *size)
+static void T20LoadBuffer(char *file, unsigned char **buffer, int *size)
 {
     FILE *fp = fopen(file, "rb");
 
-    if(!fp){ TeddyError("unable to open file : %s",file); }
+    if(!fp){ T20Error("unable to open file : %s",file); }
 
 	fseek(fp, 0, SEEK_END);
 
@@ -594,25 +590,25 @@ static void TeddyLoadBuffer(char *file, unsigned char **buffer, int *size)
 }
 
 /**********/
-static void TeddyInitGlyphs(const unsigned char *font)
+static void T20InitGlyphs(const unsigned char *font)
 {
-    teddy->glyphs = calloc(256, sizeof(unsigned char*));
+    t20->glyphs = calloc(256, sizeof(unsigned char*));
 
     for(int count=0;count<256;count++)
     {
-        teddy->glyphs[count] = calloc(teddy->glyph_w*teddy->glyph_h, sizeof(unsigned char*));
+        t20->glyphs[count] = calloc(t20->glyph_w*t20->glyph_h, sizeof(unsigned char*));
     
-        int index = teddy->glyph_h * count;
+        int index = t20->glyph_h * count;
 
         int _count=0;
 
-        for(int32_t i=0;i<teddy->glyph_h;i++)
+        for(int32_t i=0;i<t20->glyph_h;i++)
         {  
             uint8_t byte = font[index];
 
-            for(int32_t j=teddy->glyph_w-1;j>=0;j--)
+            for(int32_t j=t20->glyph_w-1;j>=0;j--)
             {
-                teddy->glyphs[count][_count] = ((byte>>j) & 1)*0xFF;
+                t20->glyphs[count][_count] = ((byte>>j) & 1)*0xFF;
 
                 _count++;
             }
@@ -623,37 +619,37 @@ static void TeddyInitGlyphs(const unsigned char *font)
 }
 
 /**********/
-static void TeddyDrawChar(char c, int row, int col)
+static void T20DrawChar(char c, int row, int col)
 {
-    unsigned char *p = teddy->texture_buffer;
+    unsigned char *p = t20->texture_buffer;
 
-    p += row * teddy->glyph_h * teddy->cols * teddy->glyph_w;
-    p += col * teddy->glyph_w;
+    p += row * t20->glyph_h * t20->cols * t20->glyph_w;
+    p += col * t20->glyph_w;
 
-    unsigned char *g = teddy->glyphs[(unsigned char)c];
+    unsigned char *g = t20->glyphs[(unsigned char)c];
 
-    for(int i=0;i<teddy->glyph_h;i++)
+    for(int i=0;i<t20->glyph_h;i++)
     {
-        memcpy(p,g,teddy->glyph_w);
+        memcpy(p,g,t20->glyph_w);
 
-        p += teddy->cols * teddy->glyph_w;
+        p += t20->cols * t20->glyph_w;
 
-        g += teddy->glyph_w;
+        g += t20->glyph_w;
     }
 }
 
 
 /**********/
-static void TeddyAddSubLine(char *str)
+static void T20AddSubLine(char *str)
 {
-    if(!str) { TeddyError("invalid string"); }
+    if(!str) { T20Error("invalid string"); }
 
-    int line_size = teddy->cols*teddy->glyph_w*teddy->glyph_h;
+    int line_size = t20->cols*t20->glyph_w*t20->glyph_h;
 
-    unsigned char *src = teddy->texture_buffer + line_size;
-    unsigned char *dst = teddy->texture_buffer;
+    unsigned char *src = t20->texture_buffer + line_size;
+    unsigned char *dst = t20->texture_buffer;
 
-    for(int i=0;i<teddy->rows-2;i++)
+    for(int i=0;i<t20->rows-2;i++)
     {
         memcpy(dst,src,line_size);
         src += line_size;
@@ -662,119 +658,118 @@ static void TeddyAddSubLine(char *str)
 
     memset(dst,0x00,line_size);
 
-    size_t limit = ( strlen(str) < (size_t)teddy->cols ) ? strlen(str) : (size_t)teddy->cols;
+    size_t limit = ( strlen(str) < (size_t)t20->cols ) ? strlen(str) : (size_t)t20->cols;
 
     for(size_t i=0;i<limit;i++)//CHECK LEN
     {
-        TeddyDrawChar(str[i],teddy->rows-2,i);
+        T20DrawChar(str[i],t20->rows-2,i);
     }
 
 }
 
 /**********/
-static void TeddyUpdatePrompt()
+static void T20UpdatePrompt()
 {
-    int line_size = teddy->cols*teddy->glyph_w*teddy->glyph_h;
+    int line_size = t20->cols*t20->glyph_w*t20->glyph_h;
 
-    unsigned char *p = teddy->texture_buffer;
+    unsigned char *p = t20->texture_buffer;
 
-    p += line_size * (teddy->rows-1);
+    p += line_size * (t20->rows-1);
 
     memset(p,0x00,line_size);
 
-    for(size_t i=0;i<strlen(teddy->prompt);i++)
+    for(size_t i=0;i<strlen(t20->prompt);i++)
     {
-        TeddyDrawChar(teddy->prompt[i],teddy->rows-1,i);
+        T20DrawChar(t20->prompt[i],t20->rows-1,i);
     }
 
 }
 
 /**********/
-static void TeddyRender()
+static void T20Render()
 {
     glClear(GL_COLOR_BUFFER_BIT);
     
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, teddy->texture_w, teddy->texture_h, GL_RED, GL_UNSIGNED_BYTE, teddy->texture_buffer);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t20->texture_w, t20->texture_h, GL_RED, GL_UNSIGNED_BYTE, t20->texture_buffer);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    glfwSwapBuffers(teddy->window);
+    glfwSwapBuffers(t20->window);
 }
 
 /****************/
-/* TEDDY PUBLIC */
+/* t20 PUBLIC */
 /****************/
-void TeddyInit(int rows, int cols, char *font_file)
+void T20Init(int rows, int cols, char *font_file)
 {
-    if(rows<1 || cols<1) { TeddyError("invalid sizes"); }
+    if(rows<1 || cols<1) { T20Error("invalid sizes"); }
 
-    teddy = calloc(1,sizeof(Teddy));
+    t20 = calloc(1,sizeof(T20));
     
-    teddy->rows = rows;
-    teddy->cols = cols;
+    t20->rows = rows;
+    t20->cols = cols;
 
-    teddy->prompt = calloc(cols,sizeof(char));
+    t20->prompt = calloc(cols,sizeof(char));
 
-    teddy->glyph_w = T_DEFAULT_GLYPH_W;
-    teddy->glyph_h = T_DEFAULT_GLYPH_H;
+    t20->glyph_w = T_DEFAULT_GLYPH_W;
+    t20->glyph_h = T_DEFAULT_GLYPH_H;
 
     unsigned char *buffer = NULL;
     int buffer_size = 0;
 
     if(font_file)
     {
-        TeddyLoadBuffer(font_file, &buffer, &buffer_size);
-        teddy->glyph_h = buffer_size/256;
+        T20LoadBuffer(font_file, &buffer, &buffer_size);
+        t20->glyph_h = buffer_size/256;
     }
 
-    teddy->texture_w = teddy->cols * teddy->glyph_w;
-    teddy->texture_h = teddy->rows * teddy->glyph_h;
-    teddy->texture_buffer = calloc(teddy->texture_w*teddy->texture_h,sizeof(unsigned char));
+    t20->texture_w = t20->cols * t20->glyph_w;
+    t20->texture_h = t20->rows * t20->glyph_h;
+    t20->texture_buffer = calloc(t20->texture_w*t20->texture_h,sizeof(unsigned char));
 
     if(buffer)
     {
-        TeddyInitGlyphs(buffer);
+        T20InitGlyphs(buffer);
         free(buffer);
     }
     else
     {
-        TeddyInitGlyphs(T_DEFAULT_FONT);
+        T20InitGlyphs(T_DEFAULT_FONT);
     }
 
-    TeddyGlfwInit();    
+    T20GlfwInit();    
 
-    TeddyOpenglInit();    
+    T20OpenglInit();    
 
-    TeddyColors(0xFFFFFF,0x000000,0x000000);
-
-    TeddyRender();
+    T20Colors(0xFFFFFF,0x000000,0x000000);
+    
 }
 
 /**********/
-void TeddyClose()
+void T20Close()
 {
-    TeddyOpenglClose();
+    T20OpenglClose();
 
-    TeddyGlfwClose();
+    T20GlfwClose();
 
     for(int count=0;count<256;count++)
     {
-        free(teddy->glyphs[count]);
+        free(t20->glyphs[count]);
     }
 
-    free(teddy->prompt);
+    free(t20->prompt);
 
-    free(teddy->glyphs);
+    free(t20->glyphs);
 
-    free(teddy->texture_buffer);
+    free(t20->texture_buffer);
 
-    free(teddy);
+    free(t20);
 }
 
 /**********/    
-void TeddyColors(int fgcolor, int bgcolor, int ctxcolor)
+void T20Colors(int fgcolor, int bgcolor, int ctxcolor)
 {
-    if(fgcolor>0xFFFFFF || bgcolor>0xFFFFFF || ctxcolor>0xFFFFFF) { TeddyError("invalid color format"); }
+    if(fgcolor>0xFFFFFF || bgcolor>0xFFFFFF || ctxcolor>0xFFFFFF) { T20Error("invalid color format"); }
 
     int loc = 0;
     unsigned char r = 0;
@@ -784,100 +779,69 @@ void TeddyColors(int fgcolor, int bgcolor, int ctxcolor)
     r = (unsigned char)(fgcolor >> 16);
     g = (unsigned char)((fgcolor >> 8) & 0xFF);
     b = (unsigned char)(fgcolor & 0xFF);
-    loc = glGetUniformLocation(teddy->prog_shader, T_FGCOLOR);
+    loc = glGetUniformLocation(t20->prog_shader, T_FGCOLOR);
     glUniform3f(loc, (float)r/0xFF, (float)g/0xFF, (float)b/0xFF );
 
     r = (unsigned char)(bgcolor >> 16);
     g = (unsigned char)((bgcolor >> 8) & 0xFF);
     b = (unsigned char)(bgcolor & 0xFF);
-    loc = glGetUniformLocation(teddy->prog_shader, T_BGCOLOR);
+    loc = glGetUniformLocation(t20->prog_shader, T_BGCOLOR);
     glUniform3f(loc, (float)r/0xFF, (float)g/0xFF, (float)b/0xFF );
 
     r = (unsigned char)(ctxcolor >> 16);
     g = (unsigned char)((ctxcolor >> 8) & 0xFF);
     b = (unsigned char)(ctxcolor & 0xFF);
     glClearColor(r/255.0f,g/255.0f,b/255.0f,1.0f);
+
+    T20Render();
 }
 
 /**********/
-int TeddyRun()
+int T20Run()
 {
     glfwPollEvents();
 
-	return !glfwWindowShouldClose(teddy->window);
+	return !glfwWindowShouldClose(t20->window);
 }
 
 /**********/
-void TeddyClear()
+void T20Clear()
 {
-    int line_size = teddy->cols*teddy->glyph_w*teddy->glyph_h;
+    int line_size = t20->cols*t20->glyph_w*t20->glyph_h;
 
-    memset(teddy->texture_buffer,0x00,(teddy->rows-1)*line_size);
+    memset(t20->texture_buffer,0x00,(t20->rows-1)*line_size);
 
-    TeddyRender();
+    T20Render();
 }
 
 /**********/
-void TeddyAddChar(char c)
+void T20AddLine(char *str)
 {
-    if(teddy->cursor>=teddy->cols){ return; }
+    if(!str) { T20Error("invalid string"); }
 
-    if(c=='\r' || c=='\n') 
-    {
-        teddy->cursor = 0;
-        return;
-    }
-
-    if(teddy->cursor==0) 
-    {
-        int line_size = teddy->cols*teddy->glyph_w*teddy->glyph_h;
-
-        unsigned char *src = teddy->texture_buffer + line_size;
-        unsigned char *dst = teddy->texture_buffer;
-
-        for(int i=0;i<teddy->rows-2;i++)
-        {
-            memcpy(dst,src,line_size);
-            src += line_size;
-            dst += line_size;
-        }
-
-        memset(dst,0x00,line_size);
-    }
-    
-    TeddyDrawChar(c,teddy->rows-2,teddy->cursor);
-    teddy->cursor++;
-
-    TeddyRender();
-}
-
-/**********/
-void TeddyAddLine(char *str)
-{
-    if(!str) { TeddyError("invalid string"); }
+    if(strlen(str)==0) { T20AddSubLine(""); T20Render(); return; }
 
     int len = strlen(str);
     char *ptr = str;
 
-    for(int i=0;i<len/teddy->cols;i++)
+    for(int i=0;i<len/t20->cols;i++)
     {
-        TeddyAddSubLine(ptr);
+        T20AddSubLine(ptr);
 
-        ptr += teddy->cols;
+        ptr += t20->cols;
     }
 
-    if(len%teddy->cols != 0) {  TeddyAddSubLine(ptr); }
+    if(len%t20->cols != 0) {  T20AddSubLine(ptr); }
+    
+    T20Render();
 
-    TeddyRender();
-
-    teddy->cursor = 0;
-
+    t20->cursor = 0;//extra
 }
 
 /**********/
-char *TeddyReadLine()
+char *T20ReadLine()
 {
-    teddy->prompt_typing = 1;
+    t20->prompt_typing = 1;
 
     char blink = 0;
 
@@ -887,25 +851,25 @@ char *TeddyReadLine()
     {
         glfwPollEvents();
 
-        if(glfwWindowShouldClose(teddy->window)) { break; }
+        if(glfwWindowShouldClose(t20->window)) { break; }
 
-        if(teddy->prompt_ready)
+        if(t20->prompt_ready)
         {
-            char *str = calloc(strlen(teddy->prompt)+1,sizeof(char));
+            char *str = calloc(strlen(t20->prompt)+1,sizeof(char));
 
-            strcpy(str,teddy->prompt);
+            strcpy(str,t20->prompt);
            
-            memset(teddy->prompt,0x00,teddy->cols);
+            memset(t20->prompt,0x00,t20->cols);
 
-            teddy->prompt_ready=0;
+            t20->prompt_ready=0;
 
-            teddy->prompt_pos = 0;
+            t20->prompt_pos = 0;
 
-            TeddyUpdatePrompt();
-
-            TeddyRender();
-
-            teddy->prompt_typing = 0;
+            T20UpdatePrompt();
+            
+            T20Render();
+            
+            t20->prompt_typing = 0;
 
             return str;
         }
@@ -915,16 +879,50 @@ char *TeddyReadLine()
         {
             blink = (blink==0) ? 0xDB : 0;
 
-            TeddyDrawChar(blink,(teddy->rows-1),teddy->prompt_pos);
+            T20DrawChar(blink,(t20->rows-1),t20->prompt_pos);
             
-            TeddyRender();
+            T20Render();
 
             blink_time = glfwGetTime();
         }
     }
 
-    teddy->prompt_typing = 0;
+    t20->prompt_typing = 0;
 
     return NULL;
 }
 
+
+/**********/
+void T20AddChar(char c)//extra function
+{
+    if(t20->cursor>=t20->cols){ return; }
+
+    if(c=='\r' || c=='\n') 
+    {
+        t20->cursor = 0;
+        return;
+    }
+
+    if(t20->cursor==0) 
+    {
+        int line_size = t20->cols*t20->glyph_w*t20->glyph_h;
+
+        unsigned char *src = t20->texture_buffer + line_size;
+        unsigned char *dst = t20->texture_buffer;
+
+        for(int i=0;i<t20->rows-2;i++)
+        {
+            memcpy(dst,src,line_size);
+            src += line_size;
+            dst += line_size;
+        }
+
+        memset(dst,0x00,line_size);
+    }
+    
+    T20DrawChar(c,t20->rows-2,t20->cursor);
+    t20->cursor++;
+
+    T20Render();
+}

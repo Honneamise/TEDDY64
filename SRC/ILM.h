@@ -55,7 +55,7 @@ void ILM_EXIT(char *str, ...);
 
 void ILM_error(ILM *IL, char *str);
 
-void ILM_load_file(ILM *IL, char *file);
+void ILM_init(ILM *IL);
 
 void ILM_reset(ILM *IL);
 

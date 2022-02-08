@@ -52,5 +52,11 @@ T20 has been tested with the following flags on Valgrind :
 
 valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes
 
+---
+**Scanlines effect :**
 
+The user @github/KitCarson03 contributed changeing the fragment shader to obtain scanline like effect.
 
+![image](SCANLINES/scanlines.png)
+
+if you want, you can patch it with the scanlines.diff file

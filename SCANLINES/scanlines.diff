@@ -1,0 +1,76 @@
+--- T20.c	2022-02-07 17:02:44.405397000 +0100
++++ T20_change.c	2022-02-08 15:38:45.159229971 +0100
+@@ -53,7 +53,9 @@
+     int glyph_w;
+     int glyph_h;
+     unsigned char **glyphs;
+-    
++  
++    int elapsed_time;
++
+     //glfw
+     GLFWwindow *window;
+ 
+@@ -229,12 +231,21 @@
+ uniform sampler2D Texture;\n\
+ uniform vec3 FgColor;\n\
+ uniform vec3 BgColor;\n\
++uniform float time;\n\
+ out vec4 final;\n\
++const float frequency = 0.3;\n\
++const float scale = 0.05;\n\
++const float velocity = 3e+2;\n\
++vec4 scan_color = vec4(0.1, 0.1, 0.1, 0.5);\n\
+ void main()\n\
+ {\n\
+     float val = texture(Texture, Tex).r;\n\
+     final = vec4(val*FgColor, 1.0f);\n\
+     if( final==vec4(0.0f,0.0f,0.0f,1.0f) ) { final=vec4(BgColor,1.0f); }\n\
++    scan_color.r += scale*sin(gl_FragCoord.y * frequency - velocity * time);\n\
++    scan_color.g += scale*sin(gl_FragCoord.y * frequency - velocity * time);\n\
++    scan_color.b += scale*sin(gl_FragCoord.y * frequency - velocity * time);\n\
++    final += scan_color;\n\
+ }\n";
+ 
+ //log
+@@ -252,6 +263,7 @@
+ static PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
+ static PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+ static PFNGLUNIFORM3FPROC glUniform3f = NULL;
++static PFNGLUNIFORM1FPROC glUniform1f = NULL;
+ static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
+ static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
+  
+@@ -431,6 +443,7 @@
+     glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)glfwGetProcAddress("glGetShaderInfoLog");
+     glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)glfwGetProcAddress("glGetUniformLocation");
+     glUniform3f = (PFNGLUNIFORM3FPROC)glfwGetProcAddress("glUniform3f");
++    glUniform1f = (PFNGLUNIFORM1FPROC)glfwGetProcAddress("glUniform1f");
+     glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)glfwGetProcAddress("glEnableVertexAttribArray");
+     glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)glfwGetProcAddress("glDisableVertexAttribArray");
+ 
+@@ -688,6 +701,9 @@
+ /**********/
+ static void T20Render()
+ {
++    int time_uniform = glGetUniformLocation(t20->prog_shader, "time");
++    glUniform1f(time_uniform, (float)t20->elapsed_time++);
++
+     glClear(GL_COLOR_BUFFER_BIT);
+     
+     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t20->texture_w, t20->texture_h, GL_RED, GL_UNSIGNED_BYTE, t20->texture_buffer);
+@@ -708,6 +724,7 @@
+     
+     t20->rows = rows;
+     t20->cols = cols;
++    t20->elapsed_time = 0;
+ 
+     t20->prompt = calloc(cols,sizeof(char));
+ 
+@@ -925,4 +942,4 @@
+     t20->cursor++;
+ 
+     T20Render();
+-}
+\ No newline at end of file
++}

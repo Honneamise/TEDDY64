@@ -3,7 +3,6 @@
 
 #include "ILM.h"
 
-
 int ILM_skip_spaces(ILM *IL);
 
 int ILM_read_until_blank(ILM *IL);

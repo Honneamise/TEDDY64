@@ -540,12 +540,12 @@ void ILM_XFER(ILM *IL)
         }
         else
         {
-            ILM_error(IL,"Empty line"); return;
+            ILM_error(IL,"Error code 4"); return;
         }
     }
     else
     {
-        ILM_error(IL,"Error code 4"); return;
+        ILM_error(IL,"Error code 5"); return;
     }
 }
 
@@ -635,7 +635,7 @@ void ILM_CMPR(ILM *IL)
             break;
         
         default :
-            ILM_error(IL, "Error code 5");
+            ILM_error(IL, "Error code 6");
             break;
     }
 
@@ -816,7 +816,7 @@ void ILM_TSTV(ILM *IL)
     //Place its index value onto the AESTK and continue execution at next suggested location. 
     //Otherwise continue at lbl.
 
-    if(ILM_skip_spaces(IL)<0) { ILM_error(IL, "Error code 6"); return; }
+    if(ILM_skip_spaces(IL)<0) { ILM_error(IL, "Error code 7"); return; }
 
     if( (int)IL->LINES[IL->CURSOR_LINE][IL->CURSOR]>=65 &&  (int)IL->LINES[IL->CURSOR_LINE][IL->CURSOR]<=90 )
     {     
@@ -841,10 +841,10 @@ void ILM_TSTN(ILM *IL)
     //If present, place its value onto the AESTK and continue execution at next suggested location. 
     //Otherwise continue at lbl.
 
-    if(ILM_skip_spaces(IL)<0) { ILM_error(IL, "Error code 7"); return; }
+    if(ILM_skip_spaces(IL)<0) { ILM_error(IL, "Error code 8"); return; }
     int start = IL->CURSOR;
 
-    if(ILM_read_until_is_digit(IL)<0) { ILM_error(IL, "Error code 8"); return; }
+    if(ILM_read_until_is_digit(IL)<0) { ILM_error(IL, "Error code 9"); return; }
     int end = IL->CURSOR;
 
     uint8_t *token = calloc(end-start+1,sizeof(uint8_t));
@@ -945,10 +945,10 @@ void ILM_TSTL(ILM *IL)
     //Report error if invalid; transfer to lbl if not present.
 
     uint8_t *start = ILM_line_skipspaces(IL->LBUF);
-    if(start==NULL){ ILM_error(IL,"Error code 9"); return; }
+    if(start==NULL){ ILM_error(IL,"Error code 10"); return; }
 
     uint8_t *end = ILM_line_tokenend(start);
-    if(end==NULL){ ILM_error(IL,"Error code 10"); return;}
+    if(end==NULL){ ILM_error(IL,"Error code 11"); return;}
 
     uint8_t *token = calloc(end-start+1,sizeof(uint8_t));
     memcpy(token,start,end-start);
@@ -964,7 +964,7 @@ void ILM_TSTL(ILM *IL)
         else
         {
             free(token);
-            ILM_error(IL,"Error code 11"); 
+            ILM_error(IL,"Error code 12"); 
             return;
         }
     }
@@ -988,15 +988,15 @@ void ILM_INSRT(ILM *IL)
     //Insert line after deleting any line with same line number.
 
     uint8_t *start = ILM_line_skipspaces(IL->LBUF);
-    if(start==NULL){ ILM_error(IL,"Error code 12"); return; }
+    if(start==NULL){ ILM_error(IL,"Error code 13"); return; }
 
     uint8_t *end = ILM_line_tokenend(start);
-    if(end==NULL){ ILM_error(IL,"Error code 13"); return; }
+    if(end==NULL){ ILM_error(IL,"Error code 14"); return; }
 
     uint8_t *token = calloc(end-start+1,sizeof(uint8_t));
     memcpy(token,start,end-start);
     
-    if(strlen((char*)token)==0){ if(token){ free(token);} ILM_error(IL,NULL); return; }//??
+    if(strlen((char*)token)==0){ if(token){ free(token);} ILM_error(IL,"Error code 15"); return; }//??
 
     if(ILM_line_isnumber(token))
     {
@@ -1018,14 +1018,14 @@ void ILM_INSRT(ILM *IL)
         else
         {
             if(token) { free(token); }
-            ILM_error(IL,"Error code 14");
+            ILM_error(IL,"Error code 16");
             return;
         }
     }
     else //no line number
     {
         if(token) { free(token); }
-        ILM_error(IL,"Error code 15");
+        ILM_error(IL,"Error code 17");
         return;
     }
 

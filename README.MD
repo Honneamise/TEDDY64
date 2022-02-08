@@ -55,7 +55,7 @@ valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes
 ---
 **Scanlines effect :**
 
-The user @github/KitCarson03 contributed changeing the fragment shader to obtain scanline like effect.
+The user KitCarson03 contributed changeing the fragment shader to obtain scanline like effect.
 
 ![image](SCANLINES/scanlines.png)
 
